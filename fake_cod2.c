@@ -15,6 +15,7 @@
 #include "pb_md5.h"
 
 #define BUFLEN 1400
+#define MAX_PLAYERS 25
 
 #define ENABLE_DEBUG 0
 
@@ -196,13 +197,16 @@ static char *getFakeName(void) {
 	return nomFinal;
 }
 
-int get_status(char *server, char *port) {
+int get_server_status(char *server, char *port, int get_players_count) {
 
 	struct sockaddr_in client;
 	int s;
 	int slen;
 	char buf[BUFLEN];
 	char get_status[] = "\xFF\xFF\xFF\xFFgetstatus";
+
+	char *line;
+	int line_num = 0;
 
 	if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		die("socket");
@@ -223,7 +227,7 @@ int get_status(char *server, char *port) {
 		die("[!] get_status");
 
 	if(!waitTimeOut(s, 3)) {
-		printf("Error : Time out.\n");
+		printf("Error : Time out 1.\n");
 		close(s);
 		return 1;
 	}
@@ -232,15 +236,30 @@ int get_status(char *server, char *port) {
 
 	if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &client, &slen) == -1)
 		die("[!] can not receive server info");
-	puts(buf);
-	close(s);
-	return 0;
+
+	if (get_players_count) {
+		line = strtok(strdup(buf), "\n");
+
+		while(line) {
+			if (strstr(line, "0 999") != NULL) {
+				line_num++;
+				LOG("%s\n", line);
+			}
+			line  = strtok(NULL, "\n");
+		}
+		close(s);
+		return line_num;
+	} else {
+		puts(buf);
+		close(s);
+		return 0;
+	}
 }
 
 int main(int argc, char *argv[]) {
 
 	struct sockaddr_in client, master_server;
-	int s, m;
+	int s, m, num_p=0;
 	int slen, master_slen;
 	char buf[BUFLEN];
 	int version = 0;
@@ -263,11 +282,11 @@ int main(int argc, char *argv[]) {
 			"for example: client 213.92.164.227 28960\n"
 			"or: client 213.92.164.227 28960 status\n"
 			"or: client 213.92.164.227 28960 %s\n", game_key);
-		exit(1);
+		return 0;
 	}
 
 	if (argc == 4 && strstr(argv[3], "status")) {
-		get_status(argv[1], argv[2]);
+		get_server_status(argv[1], argv[2], 0);
 		return 0;
 	}
 
@@ -287,6 +306,7 @@ int main(int argc, char *argv[]) {
 		printf("GAME CD KEY: %s\nGENERATED GUID: %s\n\n", game_key, guid);
 	}
 
+
 	//---------------------- MASTER SERVER AKA cod2master.activision.com -------------------------
 
 	if ((m = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
@@ -296,7 +316,7 @@ int main(int argc, char *argv[]) {
 	master_server.sin_port = htons(20700);
 	if (inet_aton("63.146.124.40", &master_server.sin_addr) == 0) {
 		fprintf(stderr, "m_inet_aton() failed\n");
-		exit(1);
+		return 1;
 	}
 	master_slen = sizeof(master_server);
 
@@ -305,7 +325,18 @@ int main(int argc, char *argv[]) {
 
 	//------------------------- Chalenge -------------------------------------------------------
 
-	while(1) {
+
+	while(num_p < MAX_PLAYERS) {
+
+		sleep(1);
+		num_p = get_server_status(argv[1], argv[2], 1);
+
+		if (num_p >= MAX_PLAYERS) {
+			printf("Number of players (%d) reached maximum limit of (%d)\n", num_p, MAX_PLAYERS);
+			close(s);
+			close(m);
+			return 1;
+		}
 
 		if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 			die("socket");
@@ -314,7 +345,7 @@ int main(int argc, char *argv[]) {
 		client.sin_port = htons(atoi(argv[2]));
 		if (inet_aton(argv[1], &client.sin_addr) == 0) {
 			fprintf(stderr, "inet_aton() failed\n");
-			exit(1);
+			return 1;
 		}
 		slen = sizeof(client);
 
@@ -322,7 +353,7 @@ int main(int argc, char *argv[]) {
 			die("[!] get_chalenge");
 
 		if(!waitTimeOut(s, 1)) {
-			printf("Error : Time out.\n");
+			printf("Error : Time out 2.\n");
 			close(s);
 			close(m);
 			return 1;
@@ -386,7 +417,7 @@ int main(int argc, char *argv[]) {
 			die("[!] connect string");
 
 		if(!waitTimeOut(s, 1)) {
-			printf("Error : Time out.\n");
+			printf("Error : Time out 3.\n");
 			close(s);
 			close(m);
 			return 1;
@@ -422,7 +453,8 @@ int main(int argc, char *argv[]) {
 			printf("\nUnhandled reply after sending the connect string: %s\n", buf);
 			continue;
 		}
-		printf(".............................................connected using name: %s .................................................\n", fake_name);
+
+		printf("player %d : ..........................................connected using name: %s .................................................\n", num_p, fake_name);
 		close(s);
 	}
 
