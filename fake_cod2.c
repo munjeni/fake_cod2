@@ -25,13 +25,12 @@
 #define LOG(...)
 #endif
 
-void die(char *s) {
-
+static void die(char *s) {
 	perror(s);
 	exit(1);
 }
 
-int waitTimeOut(int sock, unsigned int time) {
+static int waitTimeOut(int sock, unsigned int time) {
 
 	fd_set readSet;
 	FD_ZERO(&readSet);
@@ -197,7 +196,7 @@ static char *getFakeName(void) {
 	return nomFinal;
 }
 
-int get_server_status(char *server, char *port, int get_players_count) {
+static int get_server_status(char *server, char *port, int get_players_count) {
 
 	struct sockaddr_in client;
 	int s;
@@ -275,13 +274,13 @@ int main(int argc, char *argv[]) {
 	char *guid;
 
 	if (argc != 3 && argc != 4) {
-		printf("use: client IP PORT\n"
-			"or use: client IP PORT status\n"
-			"or use: client IP PORT GAME_KEY\n"
+		printf("use: fake_cod2 IP PORT\n"
+			"or use: fake_cod2 IP PORT status\n"
+			"or use: fake_cod2 IP PORT GAME_KEY\n"
 			"\n"
-			"for example: client 213.92.164.227 28960\n"
-			"or: client 213.92.164.227 28960 status\n"
-			"or: client 213.92.164.227 28960 %s\n", game_key);
+			"for example: fake_cod2 213.92.164.227 28960\n"
+			"or: fake_cod2 213.92.164.227 28960 status\n"
+			"or: fake_cod2 213.92.164.227 28960 %s\n", game_key);
 		return 0;
 	}
 
@@ -332,7 +331,7 @@ int main(int argc, char *argv[]) {
 		num_p = get_server_status(argv[1], argv[2], 1);
 
 		if (num_p >= MAX_PLAYERS) {
-			printf("Number of players (%d) reached maximum limit of (%d)\n", num_p, MAX_PLAYERS);
+			printf("Number of players (%d) reached maximum limit of (%d)\n\n", num_p, MAX_PLAYERS);
 			close(m);
 			return 1;
 		}
