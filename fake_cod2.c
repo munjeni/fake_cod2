@@ -85,7 +85,7 @@ static char *do_md5(uint8_t *key, uint32_t seed) {
     static const char hex[16] = "0123456789abcdef";
 
     MD5Init(&ctx, seed);
-    MD5Update(&ctx, key, strlen(key));
+    MD5Update(&ctx, key, strlen((char *)key));
     MD5Final(&ctx);
 
     for(i=0; i<16; i++) {
@@ -234,7 +234,7 @@ int get_server_status(char *server, char *port, int get_players_count) {
 
 	memset(buf,'\0', BUFLEN);
 
-	if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &client, &slen) == -1)
+	if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&client, (socklen_t *)&slen) == -1)
 		die("[!] can not receive server info");
 
 	if (get_players_count) {
@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
 	char master[80];	// = "\xff\xff\xff\xffgetKeyAuthorize 0 HEEXU3XAG6EZ7JPX PB 069ca5c3f5c175c9c47d6fb6e9bc5259";
 	char get_chalenge[80];	// = "\xff\xff\xff\xffgetchallenge 0 \"069ca5c3f5c175c9c47d6fb6e9bc5259\"";
 	char game_key[] = "HEEXU3XAG6EZ7JPXFDFD";
-	char key_part[16];	//part of the game key since no whole key is used for getting chalenge
+	char key_part[17];	//part of the game key since no whole key is used for getting chalenge
 
 	char *chalenge_response, *chresp;
 	char connect[4096];
@@ -293,14 +293,14 @@ int main(int argc, char *argv[]) {
 	if (argc == 4 && strlen(argv[3]) == 20) {
 		strncpy(key_part, argv[3], 16);
 		key_part[16] = '\0';
-		guid = do_md5(argv[3], 0x00b684a3);
+		guid = do_md5((unsigned char *)argv[3], 0x00b684a3);
 		snprintf(master, sizeof(master), "\xff\xff\xff\xffgetKeyAuthorize 0 %s PB %s", key_part, guid);
 		snprintf(get_chalenge, sizeof(get_chalenge), "\xff\xff\xff\xffgetchallenge 0 \"%s\"", guid);
 		printf("GAME CD KEY: %s\nGENERATED GUID: %s\n\n", argv[3], guid);
 	} else {
 		strncpy(key_part, game_key, 16);
 		key_part[16] = '\0';
-		guid = do_md5(game_key, 0x00b684a3);
+		guid = do_md5((unsigned char *)game_key, 0x00b684a3);
 		snprintf(master, sizeof(master), "\xff\xff\xff\xffgetKeyAuthorize 0 %s PB %s", key_part, guid);
 		snprintf(get_chalenge, sizeof(get_chalenge), "\xff\xff\xff\xffgetchallenge 0 \"%s\"", guid);
 		printf("GAME CD KEY: %s\nGENERATED GUID: %s\n\n", game_key, guid);
@@ -333,7 +333,6 @@ int main(int argc, char *argv[]) {
 
 		if (num_p >= MAX_PLAYERS) {
 			printf("Number of players (%d) reached maximum limit of (%d)\n", num_p, MAX_PLAYERS);
-			close(s);
 			close(m);
 			return 1;
 		}
@@ -361,7 +360,7 @@ int main(int argc, char *argv[]) {
 
 		memset(buf,'\0', BUFLEN);
 
-		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &client, &slen) == -1)
+		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&client, (socklen_t *)&slen) == -1)
 			die("[!] chalenge response");
 		else {
 			if (strstr(buf, "ÿÿÿÿchallengeResponse") == NULL) {
@@ -425,7 +424,7 @@ int main(int argc, char *argv[]) {
 
 		memset(buf,'\0', BUFLEN);
 
-		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &client, &slen) == -1)
+		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&client, (socklen_t *)&slen) == -1)
 			die("recvfrom()");
 
 		if (strstr(buf, "ÿÿÿÿconnectResponse") == NULL) {
