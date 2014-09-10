@@ -55,7 +55,8 @@ static char *calc_md5(const char *str, int length) {
 	int n;
 	MD5_CTX c;
 	unsigned char digest[16];
-	char *out = (char*)malloc(33);
+	static char out[33];
+	static const char hex[16] = "0123456789abcdef";
 
 	MD5_Init(&c);
 
@@ -69,9 +70,15 @@ static char *calc_md5(const char *str, int length) {
     	}
 
 	MD5_Final(digest, &c);
-
+/*
 	for (n = 0; n < 16; ++n)
 		snprintf(&(out[n*2]), 16*2, "%02x", (unsigned int)digest[n]);
+*/
+	for(n=0; n<16; n++) {
+		out[n<<1] = hex[digest[n] >> 4];
+		out[(n<<1)+1] = hex[digest[n] & 15];
+	}
+	out[n<<1] = 0;
 
 	return out;
 }
