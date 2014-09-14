@@ -7,9 +7,20 @@
 #include <string.h> //memset
 #include <stdlib.h> //exit(0);
 #include <unistd.h> //close
+#ifdef WIN32
+	#include <winsock.h>
+	#include <io.h>
+	#include "winerror.h"
+
+	#define close closesocket
+	#define sleep Sleep
+	#define ONESEC 1000
+#else
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <sys/select.h> //fd_set
+#define ONESEC 1
+#endif
 
 #include "md5.h"
 #include "pb_md5.h"
@@ -23,6 +34,31 @@
 #define LOG printf
 #else
 #define LOG(...)
+#endif
+
+#ifdef WIN32
+typedef uint32_t u32;
+typedef int socklen_t;
+
+u32 resolv(char *host) {
+	struct hostent *hp;
+	u32 host_ip;
+
+	host_ip = inet_addr(host);
+	if(host_ip == INADDR_NONE) {
+		hp = gethostbyname(host);
+		if(!hp) {
+			printf("\nError: Unable to resolv hostname (%s)\n\n", host);
+			exit(1);
+		} else host_ip = *(u32 *)(hp->h_addr);
+	}
+	return(host_ip);
+}
+
+int inet_aton(const char *cp, struct in_addr *addr) {
+	addr->s_addr = inet_addr(cp);
+	return (addr->s_addr == INADDR_NONE) ? 0 : 1;
+}
 #endif
 
 static void die(char *s) {
@@ -280,6 +316,11 @@ int main(int argc, char *argv[]) {
 	char fake_name[40];
 	char *guid;
 
+#ifdef WIN32
+	WSADATA wsadata;
+	WSAStartup(MAKEWORD(1,0), &wsadata);
+#endif
+
 	if (argc != 3 && argc != 4) {
 		printf("use: fake_cod2 IP PORT\n"
 			"or use: fake_cod2 IP PORT status\n"
@@ -334,7 +375,7 @@ int main(int argc, char *argv[]) {
 
 	while(num_p < MAX_PLAYERS) {
 
-		sleep(1);
+		sleep(ONESEC);
 		num_p = get_server_status(argv[1], argv[2], 1);
 
 		if (num_p >= MAX_PLAYERS) {
@@ -369,21 +410,21 @@ int main(int argc, char *argv[]) {
 		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&client, (socklen_t *)&slen) == -1)
 			die("[!] chalenge response");
 		else {
-			if (strstr(buf, "ÿÿÿÿchallengeResponse") == NULL) {
+			if (strstr(buf, "\xff\xff\xff\xff" "challengeResponse") == NULL) {
 				if (strstr(calc_md5(buf, strlen(buf)), "d41d8cd98f00b204e9800998ecf8427e") != NULL) {
-					printf("?");
+					printf("?\n");
 					continue;
 				}
 
-				if (strstr(buf, "ÿÿÿÿerror\x0aEXE_ERR_CDKEY_IN_USE") != NULL) {
-					printf("I");
+				if (strstr(buf, "EXE_ERR_CDKEY_IN_USE") != NULL) {
+					printf("I\n");
 					continue;
 				}
 
-				if (strstr(buf, "\xff\xff\xff\xffneedcdkey") != NULL) {
+				if (strstr(buf, "needcdkey") != NULL) {
 					if (sendto(m, master, strlen(master), 0, (struct sockaddr *)&master_server, master_slen) == -1)
 						die("[!] send master server");
-					printf("N");
+					printf("N\n");
 					continue;
 				}
 
@@ -411,10 +452,10 @@ int main(int argc, char *argv[]) {
 
 		if (!version) {
 			/* for version 1.3 */
-			snprintf(connect, sizeof(connect), "ÿÿÿÿconnect \"\\cg_predictItems\\1\\cl_anonymous\\0\\cl_punkbuster\\1\\cl_voice\\1\\cl_wwwDownload\\1\\rate\\25000\\snaps\\20\\name\\%s\\protocol\\118\\challenge\\%s\\qport\\%d\"", fake_name, chresp, getRandomNumber(10000, 65534));
+			snprintf(connect, sizeof(connect), "\xff\xff\xff\xff" "connect \"\\cg_predictItems\\1\\cl_anonymous\\0\\cl_punkbuster\\1\\cl_voice\\1\\cl_wwwDownload\\1\\rate\\25000\\snaps\\20\\name\\%s\\protocol\\118\\challenge\\%s\\qport\\%d\"", fake_name, chresp, getRandomNumber(10000, 65534));
 		} else {
 			/* for version 1.0  correct this... I do not know how its looking on 1.0 */
-			snprintf(connect, sizeof(connect), "ÿÿÿÿconnect \"\\cg_predictItems\\1\\cl_anonymous\\0\\cl_punkbuster\\1\\cl_voice\\1\\cl_wwwDownload\\1\\rate\\25000\\snaps\\20\\name\\%s\\protocol\\118\\challenge\\%s\\qport\\%d\"", fake_name, chresp, getRandomNumber(10000, 65534));
+			snprintf(connect, sizeof(connect), "\xff\xff\xff\xff" "connect \"\\cg_predictItems\\1\\cl_anonymous\\0\\cl_punkbuster\\1\\cl_voice\\1\\cl_wwwDownload\\1\\rate\\25000\\snaps\\20\\name\\%s\\protocol\\118\\challenge\\%s\\qport\\%d\"", fake_name, chresp, getRandomNumber(10000, 65534));
 			LOG("%s\n", connect);
 		}
 
@@ -433,25 +474,25 @@ int main(int argc, char *argv[]) {
 		if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *)&client, (socklen_t *)&slen) == -1)
 			die("recvfrom()");
 
-		if (strstr(buf, "ÿÿÿÿconnectResponse") == NULL) {
+		if (strstr(buf, "\xff\xff\xff\xff" "connectResponse") == NULL) {
 			if (strstr(buf, "EXE_SERVER_IS_DIFFERENT_VER1.0") != NULL) {
-				printf("VER 1.0");
+				printf("VER 1.0\n");
 				version = 1;
 				continue;
 			}
 
-			if (strstr(buf, "ÿÿÿÿerror\x0aEXE_SERVERISFULL") != NULL) {
-				printf("F");
+			if (strstr(buf, "EXE_SERVERISFULL") != NULL) {
+				printf("F\n");
 				continue;
 			}
 
-			if (strstr(buf, "ÿÿÿÿerror\x0aEXE_BAD_CHALLENGE") != NULL) {
-				printf("C");
+			if (strstr(buf, "EXE_BAD_CHALLENGE") != NULL) {
+				printf("C\n");
 				continue;
 			}
 
 			if (strstr(calc_md5(buf, strlen(buf)), "d41d8cd98f00b204e9800998ecf8427e") != NULL) {
-				printf("?");
+				printf("?\n");
 				continue;
 			}
 
@@ -459,7 +500,7 @@ int main(int argc, char *argv[]) {
 			continue;
 		}
 
-		printf("player %d : ..........................................connected using name: %s .................................................\n", num_p, fake_name);
+		printf("player %d : ...............connected using name: %s ...............\n", num_p, fake_name);
 		close(s);
 	}
 

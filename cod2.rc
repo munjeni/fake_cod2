@@ -1,0 +1,26 @@
+id ICON "cod2.ico"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "080904E4"
+    BEGIN
+      VALUE "CompanyName", "No company"
+      VALUE "FileDescription", "COD2 fake"
+      VALUE "FileVersion", "1.0"
+      VALUE "InternalName", "cod2"
+      VALUE "LegalCopyright", "munjeni @ 2014"
+      VALUE "OriginalFilename", "cod2.exe"
+      VALUE "ProductName", "cod2"
+      VALUE "ProductVersion", "1.0"
+    END
+  END
+
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x809, 1252
+  END
+END
