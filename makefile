@@ -36,4 +36,4 @@ clean:
 	rm -f *.o *.res
 
 distclean:
-	rm -f *.o fake_cod2 fake_cod2_arm fake_cod2.exe
+	rm -f *.o *.res fake_cod2 fake_cod2_arm fake_cod2.exe

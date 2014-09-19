@@ -305,6 +305,7 @@ int main(int argc, char *argv[]) {
 	int slen, master_slen;
 	char buf[BUFLEN];
 	int version = 0;
+	int cnt = 0;
 
 	char master[80];	// = "\xff\xff\xff\xffgetKeyAuthorize 0 HEEXU3XAG6EZ7JPX PB 069ca5c3f5c175c9c47d6fb6e9bc5259";
 	char get_chalenge[80];	// = "\xff\xff\xff\xffgetchallenge 0 \"069ca5c3f5c175c9c47d6fb6e9bc5259\"";
@@ -395,15 +396,26 @@ int main(int argc, char *argv[]) {
 		}
 		slen = sizeof(client);
 
-		if (sendto(s, get_chalenge, strlen(get_chalenge), 0, (struct sockaddr *)&client, slen) == -1)
-			die("[!] get_chalenge");
+		while(!waitTimeOut(s, 1) && strstr(buf, "\xff\xff\xff\xff" "challengeResponse") == NULL) {
+			if (sendto(s, get_chalenge, strlen(get_chalenge), 0, (struct sockaddr *)&client, slen) == -1)
+				die("[!] get_chalenge");
 
-		if(!waitTimeOut(s, 1)) {
-			printf("Error : Time out 2.\n");
-			close(s);
-			close(m);
-			return 1;
+			//if(!waitTimeOut(s, 1)) {
+			//	printf("Error : Time out 2.\n");
+			//	close(s);
+			//	close(m);
+			//	return 1;
+			//}
+			cnt += 1;
+			LOG("Sending getchallenge: %d\n", cnt);
+			if(cnt > 20) {
+				printf("Probably you are banned from server!\n");
+				close(s);
+				close(m);
+				return 1;
+			}
 		}
+		cnt = 0;
 
 		memset(buf,'\0', BUFLEN);
 
