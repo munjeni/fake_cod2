@@ -25,12 +25,12 @@ fake_cod2_arm:
 
 fake_cod2.exe:
 
-	${CCWIN} -c md5.c -o md5_win.o
-	${CCWIN} -c pb_md5.c -o pb_md5_win.o
-	${CCWIN} -c fake_cod2.c -o fake_cod2_win.o
-	${CCWIN} -c strsep.c -o strsep_win.o
+	${CCWIN} -W -Wall -pedantic -std=c99 -c md5.c -o md5_win.o
+	${CCWIN} -W -Wall -pedantic -std=c99 -c pb_md5.c -o pb_md5_win.o
+	${CCWIN} -W -Wall -pedantic -std=c99  -DWIN32 -c strsep.c -o strsep_win.o
+	${CCWIN} -W -Wall -pedantic -std=c99 -DWIN32 -c fake_cod2.c -o fake_cod2_win.o
 	${WINDRES} cod2.rc -O coff -o cod2.res
-	${CCWIN} md5_win.o pb_md5_win.o strsep_win.o fake_cod2_win.o cod2.res -o fake_cod2.exe -lwsock32
+	${CCWIN} -W -Wall -pedantic -std=c99 -DWIN32 md5_win.o pb_md5_win.o strsep_win.o fake_cod2_win.o cod2.res -o fake_cod2.exe -lwsock32
 
 clean:
 	rm -f *.o *.res

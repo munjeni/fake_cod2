@@ -59,6 +59,16 @@ int inet_aton(const char *cp, struct in_addr *addr) {
 	addr->s_addr = inet_addr(cp);
 	return (addr->s_addr == INADDR_NONE) ? 0 : 1;
 }
+
+char *strdup(const char *str) {
+	int n = strlen(str) + 1;
+	char *dup = malloc(n * sizeof(char));
+	if(dup) {
+		strcpy(dup, str);
+	}
+	return dup;
+}
+char *strsep(stringp, delim);
 #endif
 
 static void die(char *s) {
